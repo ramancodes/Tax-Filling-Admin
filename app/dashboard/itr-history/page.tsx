@@ -156,7 +156,8 @@ const TaxReturnsDashboard: NextPage = () => {
               <th className="text-left p-4">Id</th>
               <th className="text-left p-4">User Email</th>
               <th className="text-left p-4">Form Type</th>
-              <th className="text-left p-4">Tax Amount</th>
+              <th className="text-left p-4">Total Income</th>
+              <th className="text-left p-4">Total Tax</th>
               <th className="text-left p-4">Tax File Date</th>
               <th className="text-left p-4">Year</th>
             </tr>
@@ -176,6 +177,10 @@ const TaxReturnsDashboard: NextPage = () => {
                       {getITRTypeShort(tax.itrType)}
                     </span>
                   </td>
+                  <td className="p-4">₹{parseFloat(tax.totalIncome).toLocaleString('en-IN', {
+                    maximumFractionDigits: 2,
+                    minimumFractionDigits: 2
+                  })}</td>
                   <td className="p-4">₹{parseFloat(tax.totalTaxAmount).toLocaleString('en-IN', {
                     maximumFractionDigits: 2,
                     minimumFractionDigits: 2
