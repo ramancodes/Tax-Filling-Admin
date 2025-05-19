@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useAppDispatch, useAppSelector, RootState } from "../../../../store";
 import axios from 'axios';
+import { AppConfig } from '../../../../config/config';
 
 // This component needs to be placed in app/user-details/[userId]/page.tsx for the routing to work properly
 
@@ -86,7 +87,7 @@ export default function UserDetails() {
     const fetchUserData = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`http://localhost:8000/api/admin/get-user/${userId}`, {
+        const response = await axios.get(`${AppConfig.BACKEND_URL}/admin/get-user/${userId}`, {
           headers: { 
             Authorization: `Bearer ${bearerToken}`,
             'Content-Type': 'application/json'

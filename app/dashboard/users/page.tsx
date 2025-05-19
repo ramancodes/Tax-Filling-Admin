@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import axios from "axios";
 import { useAppDispatch, useAppSelector, RootState } from "../../../store";
 import { useRouter  } from "next/navigation";
+import { AppConfig } from '../../../config/config';
 
 // Updated User interface based on the actual API response structure
 interface UserProfile {
@@ -421,7 +422,7 @@ export default function AdminUserManagement() {
     try {
       setLoading(true);
       const response = await axios.get<ApiResponse>(
-        'http://localhost:8000/api/admin/get-allUsers',
+        `${AppConfig.BACKEND_URL}/admin/get-allUsers`,
         {
           headers: { Authorization: `Bearer ${bearerToken}` }
         }
@@ -492,7 +493,7 @@ export default function AdminUserManagement() {
       if (currentUser) {
         // Update existing user
         await axios.put(
-          `http://localhost:8000/api/admin/edit-user/${currentUser.id}`,
+          `${AppConfig.BACKEND_URL}/admin/edit-user/${currentUser.id}`,
           userData,
           {
             headers: { Authorization: `Bearer ${bearerToken}` }
@@ -501,7 +502,7 @@ export default function AdminUserManagement() {
       } else {
         // Add new user
         await axios.post(
-          'http://localhost:8000/api/admin/add-user',
+          `${AppConfig.BACKEND_URL}/admin/add-user`,
           userData,
           {
             headers: { Authorization: `Bearer ${bearerToken}` }
@@ -525,7 +526,7 @@ export default function AdminUserManagement() {
     try {
       setLoading(true);
       await axios.delete(
-        `http://localhost:8000/api/admin/delete-user/${userToDelete.id}`,
+        `${AppConfig.BACKEND_URL}/admin/delete-user/${userToDelete.id}`,
         {
           headers: { Authorization: `Bearer ${bearerToken}` }
         }

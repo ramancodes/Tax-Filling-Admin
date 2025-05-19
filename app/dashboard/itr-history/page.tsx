@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import type { NextPage } from 'next';
 import { useAppDispatch, useAppSelector, RootState } from "../../../store";
 import axios from 'axios';
+import {AppConfig} from '../../../config/config'
 
 interface IncomeDetail {
   incomeType: string;
@@ -53,7 +54,7 @@ const TaxReturnsDashboard: NextPage = () => {
   useEffect(() => {
     const fetchTaxes = async () => {
       try {
-        const response = await axios.get(`http://localhost:8000/api/admin/all-taxes`, {
+        const response = await axios.get(`${AppConfig.BACKEND_URL}/admin/all-taxes`, {
           headers: { 
             Authorization: `Bearer ${bearerToken}`,
             'Content-Type': 'application/json'
