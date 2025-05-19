@@ -12,8 +12,6 @@ export default function Dashboard() {
   useEffect(()=>{
     if(bearerToken){
       redirect('/dashboard');
-    } else {
-      redirect('/login');
     }
   } ,[]);
 }

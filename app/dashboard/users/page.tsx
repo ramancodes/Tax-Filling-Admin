@@ -2,23 +2,58 @@
 
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
+import axios from "axios";
 import { useAppDispatch, useAppSelector, RootState } from "../../../store";
-import { getUserDetails, updateUserDetails } from "../../../store/users/actions";
+import { useRouter  } from "next/navigation";
+
+// Updated User interface based on the actual API response structure
+interface UserProfile {
+  id: string;
+  firstName: string;
+  middleName: string;
+  lastName: string;
+  gender: string;
+  dob: string;
+  phoneNo: string;
+  address: string;
+  occupation: string;
+  website: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+  userId: string;
+}
 
 interface User {
   id: string;
-  name: string;
+  username: string;
   email: string;
-  phone: string;
-  registeredOn: string;
-  dob: string;
-  category: 'user' | 'admin';
+  password: string;
+  role: string;
+  userProfileId: string | null;
+  bankDetailId: string | null;
+  documentId: string | null;
+  incomeSourcesId: string | null;
+  incomeTaxesId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+  userProfile: UserProfile | null;
+}
+
+// Updated interface for API responses
+interface ApiResponse {
+  message: string;
+  users: {
+    count: number;
+    rows: User[];
+  };
 }
 
 interface AddEditUserModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (user: Omit<User, 'id'>) => void;
+  onSave: (userData: UserFormData) => void;
   user?: User;
 }
 
@@ -29,123 +64,80 @@ interface DeleteConfirmModalProps {
   userName: string;
 }
 
-const fetchUsers = async (): Promise<User[]> => {
-  await new Promise(resolve => setTimeout(resolve, 800));
-  return [
-    {
-      id: '1',
-      name: 'Raman',
-      email: 'raman@example.com',
-      phone: '987654321',
-      registeredOn: '2023-06-15T08:30:00Z',
-      dob: '1985-03-21T00:00:00Z',
-      category: 'user'
-    },
-    {
-      id: '2',
-      name: 'admin',
-      email: 'admin@example.com',
-      phone: '987654321',
-      registeredOn: '2023-08-22T14:15:00Z',
-      dob: '1990-11-08T00:00:00Z',
-      category: 'admin'
-    },
-    {
-      id: '3',
-      name: 'Robert Johnson',
-      email: 'robert.johnson@example.com',
-      phone: '(555) 456-7890',
-      registeredOn: '2023-04-10T09:45:00Z',
-      dob: '1978-07-14T00:00:00Z',
-      category: 'user'
-    },
-    {
-      id: '4',
-      name: 'Emily Davis',
-      email: 'emily.davis@example.com',
-      phone: '(555) 234-5678',
-      registeredOn: '2023-09-30T11:20:00Z',
-      dob: '1995-02-28T00:00:00Z',
-      category: 'admin'
-    },
-    {
-      id: '5',
-      name: 'Michael Wilson',
-      email: 'michael.wilson@example.com',
-      phone: '(555) 876-5432',
-      registeredOn: '2023-07-05T16:40:00Z',
-      dob: '1982-09-17T00:00:00Z',
-      category: 'user'
-    }
-  ];
-};
+// Form data interface for creating/updating users
+interface UserFormData {
+  firstName: string;
+  lastName: string;
+  middleName: string;
+  email: string;
+  username: string;
+  phoneNo: string;
+  dob: string;
+  gender: string;
+  address: string;
+  occupation: string;
+  website: string;
+  role: string;
+  password?: string;
+}
 
-const addUser = async (user: Omit<User, 'id'>): Promise<User> => {
-  // Simulating API delay
-  await new Promise(resolve => setTimeout(resolve, 800));
-  
-  // In a real app, this would be handled by your backend
-  return {
-    ...user,
-    id: Math.random().toString(36).substring(2, 9) // Generate a random ID
-  };
-};
-
-const updateUser = async (user: User): Promise<User> => {
-  // Simulating API delay
-  await new Promise(resolve => setTimeout(resolve, 800));
-  
-  // In a real app, this would be handled by your backend
-  return user;
-};
-
-const deleteUser = async (id: string): Promise<void> => {
-  // Simulating API delay
-  await new Promise(resolve => setTimeout(resolve, 800));
-  
-  // In a real app, this would be handled by your backend
-  return;
-};
-
-// Modal components
 const AddEditUserModal: React.FC<AddEditUserModalProps> = ({ isOpen, onClose, onSave, user }) => {
-  const [formData, setFormData] = useState<Omit<User, 'id'>>({
-    name: '',
+  const [formData, setFormData] = useState<UserFormData>({
+    firstName: '',
+    lastName: '',
+    middleName: '',
     email: '',
-    phone: '',
-    registeredOn: new Date().toISOString(),
+    username: '',
+    phoneNo: '',
     dob: '',
-    category: 'user'
+    gender: 'Male',
+    address: '',
+    occupation: '',
+    website: '',
+    role: 'user',
+    password: ''
   });
 
   useEffect(() => {
-    if (user) {
+    if (user && user.userProfile) {
       setFormData({
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        registeredOn: user.registeredOn,
-        dob: user.dob,
-        category: user.category
+        firstName: user.userProfile.firstName || '',
+        lastName: user.userProfile.lastName || '',
+        middleName: user.userProfile.middleName || '',
+        email: user.email || '',
+        username: user.username || '',
+        phoneNo: user.userProfile.phoneNo || '',
+        dob: user.userProfile.dob ? user.userProfile.dob.split('T')[0] : '',
+        gender: user.userProfile.gender || 'Male',
+        address: user.userProfile.address || '',
+        occupation: user.userProfile.occupation || '',
+        website: user.userProfile.website || '',
+        role: user.role || 'user',
+        password: '' // Password field is empty for editing
       });
     } else {
+      // Reset form for new user
       setFormData({
-        name: '',
+        firstName: '',
+        lastName: '',
+        middleName: '',
         email: '',
-        phone: '',
-        registeredOn: new Date().toISOString(),
+        username: '',
+        phoneNo: '',
         dob: '',
-        category: 'user'
+        gender: 'Male',
+        address: '',
+        occupation: '',
+        website: '',
+        role: 'user',
+        password: '' // Include password field for new users
       });
     }
   }, [user, isOpen]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ 
-      ...prev, 
-      [name]: name === 'category' ? (value as 'user' | 'admin') : value 
-    }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -157,23 +149,69 @@ const AddEditUserModal: React.FC<AddEditUserModalProps> = ({ isOpen, onClose, on
 
   return (
     <div className="fixed inset-0 bg-black/20 bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
         <h2 className="text-xl font-semibold mb-4">{user ? 'Edit User' : 'Add New User'}</h2>
         <form onSubmit={handleSubmit}>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="mb-4">
+              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="firstName">
+                First Name
+              </label>
+              <input
+                type="text"
+                id="firstName"
+                name="firstName"
+                value={formData.firstName}
+                onChange={handleChange}
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                required
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="lastName">
+                Last Name
+              </label>
+              <input
+                type="text"
+                id="lastName"
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleChange}
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                required
+              />
+            </div>
+          </div>
+
           <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="name">
-              Name
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="middleName">
+              Middle Name
             </label>
             <input
               type="text"
-              id="name"
-              name="name"
-              value={formData.name}
+              id="middleName"
+              name="middleName"
+              value={formData.middleName}
+              onChange={handleChange}
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="username">
+              Username
+            </label>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              value={formData.username}
               onChange={handleChange}
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
               required
             />
           </div>
+
           <div className="mb-4">
             <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="email">
               Email
@@ -188,20 +226,40 @@ const AddEditUserModal: React.FC<AddEditUserModalProps> = ({ isOpen, onClose, on
               required
             />
           </div>
+
+          {!user && (
+            <div className="mb-4">
+              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="password">
+                Password
+              </label>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                required={!user}
+                minLength={6}
+              />
+            </div>
+          )}
+
           <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="phone">
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="phoneNo">
               Phone Number
             </label>
             <input
               type="tel"
-              id="phone"
-              name="phone"
-              value={formData.phone}
+              id="phoneNo"
+              name="phoneNo"
+              value={formData.phoneNo}
               onChange={handleChange}
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
               required
             />
           </div>
+
           <div className="mb-4">
             <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="dob">
               Date of Birth
@@ -210,20 +268,81 @@ const AddEditUserModal: React.FC<AddEditUserModalProps> = ({ isOpen, onClose, on
               type="date"
               id="dob"
               name="dob"
-              value={formData.dob.split('T')[0]}
-              onChange={(e) => setFormData(prev => ({ ...prev, dob: `${e.target.value}T00:00:00Z` }))}
+              value={formData.dob}
+              onChange={handleChange}
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
               required
             />
           </div>
+
           <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="category">
-              Category
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="gender">
+              Gender
             </label>
             <select
-              id="category"
-              name="category"
-              value={formData.category}
+              id="gender"
+              name="gender"
+              value={formData.gender}
+              onChange={handleChange}
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              required
+            >
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="address">
+              Address
+            </label>
+            <input
+              type="text"
+              id="address"
+              name="address"
+              value={formData.address}
+              onChange={handleChange}
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="occupation">
+              Occupation
+            </label>
+            <input
+              type="text"
+              id="occupation"
+              name="occupation"
+              value={formData.occupation}
+              onChange={handleChange}
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="website">
+              Website
+            </label>
+            <input
+              type="text"
+              id="website"
+              name="website"
+              value={formData.website}
+              onChange={handleChange}
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            />
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="role">
+              Role
+            </label>
+            <select
+              id="role"
+              name="role"
+              value={formData.role}
               onChange={handleChange}
               className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
               required
@@ -232,6 +351,7 @@ const AddEditUserModal: React.FC<AddEditUserModalProps> = ({ isOpen, onClose, on
               <option value="admin">Admin</option>
             </select>
           </div>
+
           <div className="flex justify-end">
             <button
               type="button"
@@ -289,78 +409,66 @@ export default function AdminUserManagement() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
   const [currentUser, setCurrentUser] = useState<User | undefined>(undefined);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
-  const [fetch, setFetch] = useState(true);
-  const dispatch = useAppDispatch();
-  const {
-    application: {
-      bearerToken,
-      id,
-      email,
-      apiState: { status, isError, message },
-    },
-    users: {
-      users: { rows, count },
-    },
-  } = useAppSelector((state: RootState) => state);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'user' | 'admin'>('all');
+  const [totalCount, setTotalCount] = useState<number>(0);
 
+  const { application: { bearerToken } } = useAppSelector((state: RootState) => state);
 
-  const fetchUserDetails = async () => {
+  const router = useRouter();
+
+  const fetchUsers = async () => {
     try {
-      dispatch(
-        getUserDetails(id, {
-          headers: { Authorization: `Bearer ${bearerToken}` },
-        })
+      setLoading(true);
+      const response = await axios.get<ApiResponse>(
+        'http://localhost:8000/api/admin/get-allUsers',
+        {
+          headers: { Authorization: `Bearer ${bearerToken}` }
+        }
       );
-    } catch (error) {
-      console.log(error);
+      
+      setUsers(response.data.users.rows);
+      setFilteredUsers(response.data.users.rows);
+      setTotalCount(response.data.users.count);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching users:', err);
+      setError('Failed to load users. Please check your connection and try again.');
+    } finally {
+      setLoading(false);
     }
+  };
+  
+
+  const handleViewUser = (userId:any) => {
+    router.push(`/dashboard/user-details/${userId}`);
   };
 
   useEffect(() => {
-    if (fetch) {
-      fetchUserDetails();
-      setFetch(false);
-    }
-  }, [fetch]);
-  
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [categoryFilter, setCategoryFilter] = useState<'all' | 'user' | 'admin'>('all');
-
-  useEffect(() => {
-    const loadUsers = async () => {
-      try {
-        setLoading(true);
-        const userData = await fetchUsers();
-        setUsers(userData);
-        setFilteredUsers(userData);
-      } catch (err) {
-        setError('Failed to load users. Please try again later.');
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadUsers();
-  }, []);
+    fetchUsers();
+  }, [bearerToken]);
 
   useEffect(() => {
     let result = [...users];
     
     // Apply search filter
     if (searchTerm) {
+      const searchTermLower = searchTerm.toLowerCase();
       result = result.filter(user => 
-        user.name.toLowerCase().includes(searchTerm.toLowerCase())
+        user.userProfile?.firstName?.toLowerCase().includes(searchTermLower) ||
+        user.userProfile?.lastName?.toLowerCase().includes(searchTermLower) ||
+        user.email?.toLowerCase().includes(searchTermLower) ||
+        user.username?.toLowerCase().includes(searchTermLower)
       );
     }
     
-    // Apply category filter
-    if (categoryFilter !== 'all') {
-      result = result.filter(user => user.category === categoryFilter);
+    // Apply role filter
+    if (roleFilter !== 'all') {
+      result = result.filter(user => user.role === roleFilter);
     }
     
     setFilteredUsers(result);
-  }, [users, searchTerm, categoryFilter]);
+  }, [users, searchTerm, roleFilter]);
 
   const handleAddUser = () => {
     setCurrentUser(undefined);
@@ -377,24 +485,35 @@ export default function AdminUserManagement() {
     setIsDeleteModalOpen(true);
   };
 
-  const handleSaveUser = async (userData: Omit<User, 'id'>) => {
+  const handleSaveUser = async (userData: UserFormData) => {
     try {
       setLoading(true);
       
       if (currentUser) {
         // Update existing user
-        const updatedUser = await updateUser({ ...userData, id: currentUser.id });
-        setUsers(prev => prev.map(user => user.id === currentUser.id ? updatedUser : user));
+        await axios.put(
+          `http://localhost:8000/api/admin/edit-user/${currentUser.id}`,
+          userData,
+          {
+            headers: { Authorization: `Bearer ${bearerToken}` }
+          }
+        );
       } else {
         // Add new user
-        const newUser = await addUser(userData);
-        setUsers(prev => [...prev, newUser]);
+        await axios.post(
+          'http://localhost:8000/api/admin/add-user',
+          userData,
+          {
+            headers: { Authorization: `Bearer ${bearerToken}` }
+          }
+        );
       }
       
       setIsAddEditModalOpen(false);
+      fetchUsers(); // Refresh the user list
     } catch (err) {
+      console.error('Error saving user:', err);
       setError('Failed to save user. Please try again.');
-      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -405,12 +524,17 @@ export default function AdminUserManagement() {
     
     try {
       setLoading(true);
-      await deleteUser(userToDelete.id);
-      setUsers(prev => prev.filter(user => user.id !== userToDelete.id));
+      await axios.delete(
+        `http://localhost:8000/api/admin/delete-user/${userToDelete.id}`,
+        {
+          headers: { Authorization: `Bearer ${bearerToken}` }
+        }
+      );
       setIsDeleteModalOpen(false);
+      fetchUsers(); // Refresh the user list
     } catch (err) {
+      console.error('Error deleting user:', err);
       setError('Failed to delete user. Please try again.');
-      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -420,17 +544,29 @@ export default function AdminUserManagement() {
     setSearchTerm(e.target.value);
   };
 
-  const handleCategoryFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setCategoryFilter(e.target.value as 'all' | 'user' | 'admin');
+  const handleRoleFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setRoleFilter(e.target.value as 'all' | 'user' | 'admin');
   };
 
   // Format date for display
   const formatDate = (dateString: string) => {
+    if (!dateString) return 'N/A';
     try {
       return format(new Date(dateString), 'PP');
     } catch (err) {
       return 'Invalid date';
     }
+  };
+
+  // Get full name
+  const getFullName = (user: User) => {
+    if (!user.userProfile) return 'N/A';
+    
+    const parts = [];
+    if (user.userProfile.firstName) parts.push(user.userProfile.firstName);
+    if (user.userProfile.middleName) parts.push(user.userProfile.middleName);
+    if (user.userProfile.lastName) parts.push(user.userProfile.lastName);
+    return parts.join(' ') || 'N/A';
   };
 
   if (loading && users.length === 0) {
@@ -448,7 +584,7 @@ export default function AdminUserManagement() {
     <div className="min-h-screen p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">Users</h1>
+          <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
           <button
             onClick={handleAddUser}
             className="bg-blue-700 hover:bg-blue-900 text-white font-bold py-2 px-4 rounded flex items-center"
@@ -471,25 +607,25 @@ export default function AdminUserManagement() {
               </div>
               <input
                 type="text"
-                placeholder="Search users by name..."
+                placeholder="Search users by name, email or username..."
                 className="pl-10 pr-4 py-2 border border-gray-300 rounded-md w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={searchTerm}
                 onChange={handleSearchChange}
               />
             </div>
-            <div className="flex items-center">
-              <label htmlFor="categoryFilter" className="mr-2 text-gray-700 font-medium">Filter by Category:</label>
+            {/* <div className="flex items-center">
+              <label htmlFor="roleFilter" className="mr-2 text-gray-700 font-medium">Filter by Role:</label>
               <select
-                id="categoryFilter"
+                id="roleFilter"
                 className="border border-gray-300 rounded-md py-2 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={categoryFilter}
-                onChange={handleCategoryFilterChange}
+                value={roleFilter}
+                onChange={handleRoleFilterChange}
               >
-                <option value="all">All Categories</option>
+                <option value="all">All Roles</option>
                 <option value="user">Users</option>
                 <option value="admin">Admins</option>
               </select>
-            </div>
+            </div> */}
           </div>
         </div>
 
@@ -508,6 +644,9 @@ export default function AdminUserManagement() {
                     Name
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Username
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Email
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -520,7 +659,7 @@ export default function AdminUserManagement() {
                     Registered On
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Category
+                    Role
                   </th>
                   <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
@@ -528,28 +667,35 @@ export default function AdminUserManagement() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {rows.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50">
+                {filteredUsers.map((user) => (
+                  <tr 
+                    key={user.id}
+                    className="hover:bg-gray-50 cursor-pointer"
+                    onClick={() => handleViewUser(user.id)}
+                    >
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                      <div className="text-sm font-medium text-gray-900">{getFullName(user)}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{user.email}</div>
+                      <div className="text-sm text-gray-500">{user.username || 'N/A'}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{user.phone}</div>
+                      <div className="text-sm text-gray-500">{user.email || 'N/A'}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{formatDate(user.dob)}</div>
+                      <div className="text-sm text-gray-500">{user.userProfile?.phoneNo || 'N/A'}</div> 
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{formatDate(user.registeredOn)}</div>
+                      <div className="text-sm text-gray-500">{user.userProfile?.dob ? formatDate(user.userProfile.dob) : 'N/A'}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-500">{formatDate(user.createdAt)}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        user.category === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'
+                        user.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'
                       }`}>
-                        {user.category === 'admin' ? 'Admin' : 'User'}
+                        {user.role === 'admin' ? 'Admin' : 'User'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -570,7 +716,7 @@ export default function AdminUserManagement() {
                 ))}
                 {filteredUsers.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">
+                    <td colSpan={8} className="px-6 py-4 text-center text-sm text-gray-500">
                       {users.length === 0 ? 
                         "No users found. Click \"Add New User\" to create one." : 
                         "No users match your search criteria."}
@@ -584,7 +730,7 @@ export default function AdminUserManagement() {
           {/* Result count */}
           <div className="px-6 py-3 bg-gray-50 border-t border-gray-200">
             <p className="text-sm text-gray-700">
-              Showing <span className="font-medium">{filteredUsers.length}</span> of <span className="font-medium">{users.length}</span> users
+              Showing <span className="font-medium">{filteredUsers.length}</span> of <span className="font-medium">{totalCount}</span> users
             </p>
           </div>
         </div>
@@ -615,7 +761,7 @@ export default function AdminUserManagement() {
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={handleDeleteUser}
-        userName={userToDelete?.name || ''}
+        userName={userToDelete ? getFullName(userToDelete) : ''}
       />
     </div>
   );

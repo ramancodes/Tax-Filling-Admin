@@ -4,18 +4,18 @@ import { userDetailsModel } from "../../models/user";
 import { userActions } from "./slice";
 import { setApiState } from "../applications/actions";
 
-export const getUserDetails = (UserId: string, headers = {}) => {
+export const getUserDetails = (filters: any, headers = {}) => {
   return async (dispatch: any) => {
     try {
       const { data, status } = await axios.get(
-        `${AppConfig.BACKEND_URL}/admin/get-allUsers`,
+        `${AppConfig.BACKEND_URL}/admin/get-allUsers?${filters}`,
         headers
       );
       
       dispatch(
         userActions.setUserDetails({
           userDetails: {
-            details: userDetailsModel(data.profile),
+            details: userDetailsModel(data.users),
           },
         })
       );
